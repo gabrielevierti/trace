@@ -36,18 +36,6 @@ TRACE distinguishes:
 
 **Inferred** — a relationship proposed from explicit, inspectable rules. Every relationship contains its basis and confidence score.
 
-## Roadmap
-
-- APFS/macOS artifact modules
-- Windows Registry/Event Log/Prefetch adapters
-- USB device artifacts
-- More robust browser artifact correlation
-- Timeline view
-- Graph filtering and search
-- Case/evidence manifest and integrity verification
-- Pluggable artifact parsers
-- Test corpus and parser validation suite
-
 ## License
 
 MIT
