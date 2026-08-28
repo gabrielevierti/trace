@@ -1,0 +1,35 @@
+from __future__ import annotations
+import json, html
+from pathlib import Path
+from collections import Counter
+
+
+def write_json(path, artifacts, relationships):
+    data = {'artifacts':[a.to_dict() for a in artifacts], 'relationships':[r.to_dict() for r in relationships]}
+    Path(path).write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding='utf-8')
+
+
+def write_html(path, artifacts, relationships):
+    byid = {a.id:a for a in artifacts}
+    nodes = []
+    for a in artifacts:
+        nodes.append({'id':a.id,'label':a.name[:70],'kind':a.kind,'source':a.source,'timestamp':a.timestamp,'path':a.path,'sha256':a.sha256,'metadata':a.metadata})
+    edges = [{'from':r.source_id,'to':r.target_id,'label':r.relation,'confidence':r.confidence,'basis':r.basis,'inferred':r.inferred} for r in relationships]
+    kinds = Counter(a.kind for a in artifacts)
+    payload = json.dumps({'nodes':nodes,'edges':edges}, ensure_ascii=False).replace('</','<\\/')
+    title='TRACE — Digital Evidence Correlation'
+    doc=f'''<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title}</title>
+<style>
+:root{{--bg:#0b0d10;--panel:#12161b;--line:#27303a;--text:#e7edf3;--muted:#8e9aa7;--accent:#72d5ff}}
+*{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:var(--text);font:14px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}}header{{padding:22px 28px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}}h1{{margin:0;font-size:21px}}.sub{{color:var(--muted);margin-top:5px}}.stats{{display:flex;gap:10px}}.stat{{background:var(--panel);border:1px solid var(--line);padding:10px 14px;border-radius:10px}}main{{display:grid;grid-template-columns:minmax(0,1fr) 360px;height:calc(100vh - 91px)}}#graph{{position:relative;overflow:hidden;background:radial-gradient(circle at 50% 50%,#151b21 0,#0b0d10 55%)}}svg{{width:100%;height:100%}}.edge{{stroke:#5b6772;stroke-width:1.5;opacity:.75}}.edgeText{{fill:#8f9ba8;font-size:10px}}.node{{cursor:pointer}}.node circle{{fill:#151c23;stroke:#687582;stroke-width:1.5}}.node text{{fill:#dfe7ee;font-size:11px;pointer-events:none}}.node:hover circle{{stroke:var(--accent);stroke-width:2.5}}aside{{border-left:1px solid var(--line);background:var(--panel);padding:20px;overflow:auto}}aside h2{{font-size:15px;margin:0 0 14px}}.empty{{color:var(--muted);line-height:1.6}}.field{{margin:14px 0}}.label{{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em}}.value{{margin-top:4px;word-break:break-word}}code{{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}}.pill{{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:4px 8px;margin:3px 3px 0 0;color:#bdc7d0}}.relation{{border-top:1px solid var(--line);padding:12px 0}}.confidence{{font-weight:600}}ul{{padding-left:20px;color:#bac4cd}}button{{background:#1b232b;border:1px solid #33404c;color:#e8eef4;border-radius:8px;padding:7px 10px;cursor:pointer}}.toolbar{{position:absolute;top:15px;left:15px;z-index:2;display:flex;gap:8px}}@media(max-width:850px){{main{{grid-template-columns:1fr;height:auto}}#graph{{height:65vh}}aside{{border-left:0;border-top:1px solid var(--line)}}}}
+</style></head><body>
+<header><div><h1>TRACE</h1><div class="sub">Digital Evidence Correlation Report · observed artifacts + explainable inferences</div></div><div class="stats"><div class="stat"><b>{len(artifacts)}</b><br><span class="sub">artifacts</span></div><div class="stat"><b>{len(relationships)}</b><br><span class="sub">relationships</span></div></div></header>
+<main><section id="graph"><div class="toolbar"><button onclick="fit()">Fit graph</button><button onclick="location.reload()">Reset</button></div><svg id="svg"></svg></section><aside id="details"><h2>Evidence inspector</h2><div class="empty">Select a node in the graph to inspect its evidence and relationships.</div></aside></main>
+<script>const DATA={payload};
+const svg=document.getElementById('svg'), details=document.getElementById('details'); let positions={{}};
+function esc(s){{return String(s??'').replace(/[&<>\"]/g,c=>({{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}}[c]))}}
+function layout(){{const n=DATA.nodes.length; const w=svg.clientWidth||1000,h=svg.clientHeight||700; const cx=w/2,cy=h/2; DATA.nodes.forEach((x,i)=>{{const a=2*Math.PI*i/Math.max(n,1); const r=Math.min(w,h)*.34; positions[x.id]={{x:cx+Math.cos(a)*r,y:cy+Math.sin(a)*r}}}})}}
+function render(){{layout(); svg.innerHTML=''; const g=document.createElementNS('http://www.w3.org/2000/svg','g'); svg.appendChild(g); DATA.edges.forEach(e=>{{const a=positions[e.from],b=positions[e.to]; if(!a||!b)return; const l=document.createElementNS('http://www.w3.org/2000/svg','line'); l.setAttribute('x1',a.x);l.setAttribute('y1',a.y);l.setAttribute('x2',b.x);l.setAttribute('y2',b.y);l.setAttribute('class','edge');g.appendChild(l);}}); DATA.nodes.forEach((x,i)=>{{const p=positions[x.id];const ng=document.createElementNS('http://www.w3.org/2000/svg','g');ng.setAttribute('class','node');ng.onclick=()=>inspect(x.id);const c=document.createElementNS('http://www.w3.org/2000/svg','circle');c.setAttribute('cx',p.x);c.setAttribute('cy',p.y);c.setAttribute('r',Math.max(10,Math.min(18,10+Math.log2((x.name||'').length+1))));ng.appendChild(c);const t=document.createElementNS('http://www.w3.org/2000/svg','text');t.setAttribute('x',p.x);t.setAttribute('y',p.y+32);t.setAttribute('text-anchor','middle');t.textContent=x.label;ng.appendChild(t);g.appendChild(ng);}})}}
+function inspect(id){{const x=DATA.nodes.find(n=>n.id===id); const incoming=DATA.edges.filter(e=>e.to===id),outgoing=DATA.edges.filter(e=>e.from===id); let s='<h2>'+esc(x.name)+'</h2>'; s+='<div class="field"><div class="label">Type</div><div class="value"><span class="pill">'+esc(x.kind)+'</span><span class="pill">'+esc(x.source)+'</span></div></div>'; for(const [k,v] of [['Timestamp',x.timestamp],['Path',x.path],['SHA-256',x.sha256]])if(v)s+='<div class="field"><div class="label">'+k+'</div><div class="value"><code>'+esc(v)+'</code></div></div>'; if(x.metadata&&Object.keys(x.metadata).length)s+='<div class="field"><div class="label">Metadata</div><div class="value">'+Object.entries(x.metadata).map(([k,v])=>'<div><b>'+esc(k)+'</b>: '+esc(v)+'</div>').join('')+'</div></div>'; s+='<div class="field"><div class="label">Relationships</div>'; for(const e of [...incoming,...outgoing]){{const other=DATA.nodes.find(n=>n.id===(e.from===id?e.to:e.from));s+='<div class="relation"><b>'+esc(e.label)+'</b> · <span class="confidence">'+Math.round(e.confidence*100)+'%</span><div class="sub">'+esc(other?.name)+'</div><ul>'+e.basis.map(b=>'<li>'+esc(b)+'</li>').join('')+'</ul><small class="sub">INFERRED — review supporting artifacts before drawing conclusions.</small></div>''}} s+='</div>';details.innerHTML=s}}
+function fit(){{render()}} window.addEventListener('resize',render); render();</script></body></html>'''
+    Path(path).write_text(doc, encoding='utf-8')
