@@ -1,69 +1,43 @@
-# TRACE — interview presentation
+# TRACE — Interview Brief
 
 ## 30-second pitch
 
-> TRACE is a local-first digital evidence correlation engine. I built it to solve a practical problem in forensic analysis: the same activity can leave traces in completely different places. TRACE normalizes those artifacts, preserves their provenance, and creates explainable relationships between them. It deliberately separates observed evidence from inferred correlations, and every inference exposes the rules and evidence that support it.
+> TRACE is a local-first digital evidence correlation engine. I built it around a simple problem: forensic artifacts are often fragmented across browsers, filesystems and system logs. TRACE normalizes those observations, correlates them using explicit rules, and presents the resulting evidence chains as a timeline and graph. The important design decision is that it never hides the reasoning: observed evidence and inferred relationships are kept separate, and every relationship shows its supporting basis and confidence.
 
-## Live demo
+## Demo flow
 
-Use the controlled demo first:
+1. Run `trace collect-macos --output CASE-001` on a machine you are authorized to examine.
+2. Run `trace verify CASE-001` and show the manifest/integrity result.
+3. Analyze a controlled evidence directory with browser artifacts.
+4. Open `trace-report.html`.
+5. Show the graph.
+6. Click a file node.
+7. Show the relationship inspector and its basis.
+8. Switch to Timeline and Findings.
+9. Explain one false-positive boundary and one limitation.
 
-```bash
-python3 examples/generate_demo.py
-PYTHONPATH=. python -m trace_evidence.cli analyze examples/demo_evidence --case DEMO-001
-open trace-report.html
-```
+## Technical topics to be ready for
 
-Then show a real, authorized directory of your own:
-
-```bash
-PYTHONPATH=. python -m trace_evidence.cli analyze ~/Downloads --case LOCAL-001
-open trace-report.html
-```
-
-If you want browser artifacts and have the relevant local databases:
-
-```bash
-PYTHONPATH=. python -m trace_evidence.cli analyze ~/Downloads --chrome --safari --case LOCAL-001
-```
-
-## What to demonstrate
-
-1. Open **Evidence Graph** and select an artifact.
-2. Show the SHA-256 and filesystem timestamp.
-3. Show a relationship and expand its correlation basis.
-4. Open **Timeline** to show the same artifacts chronologically.
-5. Open **Findings** and explain that indicators are deliberately conservative.
-6. Demonstrate evidence integrity with `trace manifest` and `trace verify`.
-
-## Good technical questions to expect
-
-### Why not just use an existing forensic suite?
-
-TRACE is not intended to replace established suites. It is a focused research project demonstrating artifact normalization, provenance, deterministic correlation and explainable reporting. The interesting engineering problem is the correlation layer.
-
-### Why confidence scores?
-
-A filename match alone is weak evidence. A filename plus a matching path and close timestamp is stronger. The score communicates the strength of the correlation without pretending that a heuristic is proof.
+### Why hashes?
+SHA-256 gives a deterministic digest of the bytes examined. It supports integrity verification and evidence bookkeeping. It does not prove authorship or user identity.
 
 ### Why separate observed and inferred data?
+It prevents a correlation rule from being mistaken for a fact. Every inference remains reviewable against its source artifacts.
 
-Forensic analysis must preserve the distinction between what the source artifact actually records and what an analyst infers from multiple artifacts. TRACE makes that distinction explicit in its data model and report UI.
+### Why confidence scores?
+They are prioritization scores, not probabilities. A relationship becomes stronger when independent signals agree, such as matching filename, target path and close timestamps.
 
-### Why SHA-256 manifests?
-
-The manifest provides a simple integrity check: later verification can identify evidence that is missing or has changed since the manifest was created. It is not a replacement for a complete acquisition/chain-of-custody procedure.
+### Why not use AI?
+For a forensic research tool, deterministic and explainable rules make the first version easier to validate. AI can be explored later as an optional review aid, but it should not silently generate investigative conclusions.
 
 ### What would you build next?
+- More validated macOS artifacts.
+- Windows and Android artifact adapters.
+- Controlled validation datasets and regression tests.
+- A stronger case/evidence package format.
+- Signed reports and richer provenance.
+- Better graph layouts and filtering.
 
-- More macOS artifact parsers, with version-specific schemas.
-- Windows Registry/Event Log/Prefetch parsers.
-- Pluggable artifact parser interface.
-- Stronger temporal and hash-based correlation rules.
-- Case packages with acquisition metadata and analyst notes.
-- Automated parser validation against known-ground-truth datasets.
-- A richer graph layout and evidence filtering.
+## Important limitations to state openly
 
-## Important wording
-
-Call TRACE a **research/portfolio forensic tool**. Do not describe it as validated, court-ready, or a replacement for professional forensic software. Do not claim that an indicator proves malicious activity or attribution.
+TRACE is not presented as court-ready or as a replacement for validated forensic suites. It is a personal engineering project focused on explainable artifact correlation, evidence integrity and investigator-oriented presentation.

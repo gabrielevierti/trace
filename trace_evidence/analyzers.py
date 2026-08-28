@@ -1,15 +1,24 @@
 from __future__ import annotations
 from trace_evidence.model import Artifact
+from trace_evidence.util import detect_type
+from pathlib import Path
+import zipfile
 
-def findings(artifacts):
-    out=[]
-    executable={'PE executable','ELF executable'}
+def analyze_files(artifacts):
+    findings=[]
     for a in artifacts:
-        md=a.metadata or {}; detected=md.get('detected_type',''); ext=(md.get('extension') or '').lower()
-        if a.kind=='file' and detected in executable and ext not in {'.exe','.dll','.sys','.bin','.elf',''}:
-            out.append({'severity':'HIGH','title':'File signature / extension mismatch','artifact_id':a.id,'detail':f'{a.name} is detected as {detected} but has extension {ext or "(none)"}.','basis':['content signature','filesystem filename']})
-        if a.kind=='file' and isinstance(md.get('entropy'),(int,float)) and md['entropy']>=7.6 and md.get('size',0)>=4096:
-            out.append({'severity':'INFO','title':'High entropy region','artifact_id':a.id,'detail':f'{a.name} has sampled Shannon entropy {md["entropy"]}. High entropy can occur in compressed or encrypted data; it is not proof of maliciousness.','basis':['sampled byte entropy']})
-        if a.kind=='file' and detected in executable:
-            out.append({'severity':'INFO','title':'Executable content','artifact_id':a.id,'detail':f'{a.name} contains an executable file signature ({detected}).','basis':['content signature']})
-    return out
+        if a.kind!='file': continue
+        ext=Path(a.name).suffix.lower(); typ=(a.metadata or {}).get('type','')
+        if ext and typ and ext in ('.exe','.dll') and 'PE/' not in typ:
+            findings.append({'severity':'medium','title':'Extension/type mismatch','artifact_id':a.id,'detail':f'Extension {ext} does not match detected type {typ}.'})
+        if isinstance(a.metadata.get('entropy'),float) and a.metadata['entropy']>=7.5 and a.metadata.get('size',0)>4096:
+            findings.append({'severity':'low','title':'High-entropy file region','artifact_id':a.id,'detail':'Sample entropy is high; compression or encryption may be present. This is not proof of maliciousness.'})
+        if ext=='.pdf' and a.metadata.get('size',0)>0:
+            try:
+                p=Path(a.path); data=p.read_bytes() if p.exists() and p.stat().st_size<50*1024*1024 else b''
+                if b'/JavaScript' in data or b'/JS' in data:
+                    findings.append({'severity':'medium','title':'PDF JavaScript indicator','artifact_id':a.id,'detail':'PDF bytes contain a JavaScript marker.'})
+                if b'/EmbeddedFile' in data:
+                    findings.append({'severity':'medium','title':'PDF embedded-file indicator','artifact_id':a.id,'detail':'PDF bytes contain an embedded-file marker.'})
+            except OSError: pass
+    return findings

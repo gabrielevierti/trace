@@ -5,33 +5,36 @@ from urllib.parse import urlparse
 from trace_evidence.model import Relationship
 
 def parse_time(v):
-    try:return datetime.fromisoformat(v.replace('Z','+00:00')) if v else None
-    except Exception:return None
+    try: return datetime.fromisoformat(v) if v else None
+    except (ValueError,TypeError): return None
 
 def correlate(artifacts):
     files=[a for a in artifacts if a.kind=='file']; downloads=[a for a in artifacts if a.kind=='download']; visits=[a for a in artifacts if a.kind=='browser_visit']
     rel=[]; seen=set()
     def add(r):
         k=(r.source_id,r.target_id,r.relation)
-        if k not in seen:seen.add(k);rel.append(r)
+        if k not in seen: seen.add(k); rel.append(r)
     for d in downloads:
         for f in files:
-            if not d.name or f.name.lower()!=d.name.lower():continue
-            score=.55; basis=['filename match']; dt,ft=parse_time(d.timestamp),parse_time(f.timestamp)
+            if not d.name or f.name.lower()!=d.name.lower(): continue
+            basis=['filename match']; score=.55
+            dt,ft=parse_time(d.timestamp),parse_time(f.timestamp)
             if dt and ft:
                 delta=abs((ft-dt).total_seconds())
-                if delta<=5:score+=.28;basis.append(f'timestamp proximity: {delta:.1f}s')
-                elif delta<=60:score+=.15;basis.append(f'timestamp proximity: {delta:.1f}s')
-            if d.path and f.path and Path(d.path).expanduser()==Path(f.path):score+=.12;basis.append('exact target path match')
-            add(Relationship(d.id,f.id,'downloaded_as',min(score,.99),basis))
+                if delta<=5: score+=.30; basis.append(f'timestamp proximity: {delta:.1f}s')
+                elif delta<=60: score+=.15; basis.append(f'timestamp proximity: {delta:.1f}s')
+            if d.path and f.path and Path(d.path).expanduser()==Path(f.path): score+=.12; basis.append('exact target path match')
+            add(Relationship(d.id,f.id,'downloaded_as',min(score,.99),basis,True))
     for d in downloads:
-        u=(d.metadata or {}).get('url',''); host=urlparse(u).netloc
-        if not host:continue
-        dt=parse_time(d.timestamp)
+        du=(d.metadata or {}).get('url') or ''
+        if not du: continue
+        dh=urlparse(du).netloc
         for v in visits:
-            vt=parse_time(v.timestamp); vh=urlparse((v.metadata or {}).get('url','')).netloc
-            if dt and vt and host==vh:
-                delta=abs((vt-dt).total_seconds())
-                if delta<=300:
-                    add(Relationship(v.id,d.id,'preceded_download',.80 if delta<=30 else .66,[f'timestamp proximity: {delta:.1f}s','same URL host']))
-    return sorted(rel,key=lambda x:(-x.confidence,x.relation))
+            vu=(v.metadata or {}).get('url') or ''; vh=urlparse(vu).netloc
+            dt,vt=parse_time(d.timestamp),parse_time(v.timestamp)
+            if not dh or dh!=vh or not dt or not vt: continue
+            delta=abs((vt-dt).total_seconds())
+            if delta<=300:
+                score=.84 if delta<=30 else .68; basis=[f'timestamp proximity: {delta:.1f}s','same URL host']
+                add(Relationship(v.id,d.id,'preceded_download',score,basis,True))
+    return sorted(rel,key=lambda r:(-r.confidence,r.relation))

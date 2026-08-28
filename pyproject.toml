@@ -4,17 +4,18 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "trace-evidence"
-version = "0.3.0"
-description = "Explainable digital evidence correlation and artifact analysis"
+version = "1.0.0"
+description = "Explainable digital evidence correlation and investigation toolkit"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
-authors = [{name = "Gabriele V. / TRACE contributors"}]
-
+authors = [{name="Gabriele Vieri"}]
 dependencies = []
 
 [project.scripts]
 trace = "trace_evidence.cli:main"
 
-[tool.pytest.ini_options]
-pythonpath = ["."]
+[tool.setuptools.packages.find]
+include = ["trace_evidence*"]
+
+[project.optional-dependencies]
+pdf = ["reportlab>=4.0"]

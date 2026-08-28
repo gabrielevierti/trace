@@ -1,55 +1,84 @@
 {
+  "case": {
+    "case_id": "DEMO-001",
+    "evidence_path": "/mnt/data/trace/examples/demo_evidence",
+    "analysis_version": "1.0.0"
+  },
   "artifacts": [
     {
-      "id": "37bc454c6f9dd3a6",
+      "id": "file:1252b869-e9b0-5504-9d1a-f378d41cbfd3",
       "kind": "file",
       "source": "filesystem",
-      "name": "bundle.zip",
-      "timestamp": "2026-08-28T13:32:20.917542+00:00",
-      "path": "/mnt/data/trace_final/trace/examples/demo_evidence/bundle.zip",
-      "sha256": "58580acb60edf1f7cfe3ce392441a94cc3e994080606940237ded75e9575eba6",
+      "name": "invoice.pdf",
+      "timestamp": "2026-08-28T10:00:00+00:00",
+      "path": "/mnt/data/trace/examples/demo_evidence/invoice.pdf",
+      "sha256": "61675cb17b95b2e46d6a6e5ae6da9393cf3256391101e7a4fbd87c1404e19c86",
       "metadata": {
-        "detected_type": "ZIP/OOXML archive",
-        "size": 340,
-        "entropy": 4.598,
-        "extension": ".zip",
-        "container": "archive/container candidate"
+        "size": 37,
+        "ctime": "2026-08-28T13:36:48.730544+00:00",
+        "type": "PDF document",
+        "entropy": 4.486348298002911
       },
       "observed": true
     },
     {
-      "id": "e940fbcdfac0fd9b",
-      "kind": "file",
-      "source": "filesystem",
-      "name": "notes.txt",
-      "timestamp": "2026-08-28T13:32:20.917356+00:00",
-      "path": "/mnt/data/trace_final/trace/examples/demo_evidence/notes.txt",
-      "sha256": "5f6fd39c453a77dfd781be3e313abf8228d7ecbd1af710d86812cf4fc3d9bbee",
+      "id": "demo:visit",
+      "kind": "browser_visit",
+      "source": "chrome",
+      "name": "example.test",
+      "timestamp": "2026-08-28T09:59:40+00:00",
+      "path": null,
+      "sha256": null,
       "metadata": {
-        "detected_type": "text/plain",
-        "size": 56,
-        "entropy": 4.076,
-        "extension": ".txt"
+        "url": "https://example.test/invoice.pdf"
       },
       "observed": true
     },
     {
-      "id": "16d26555883edc6f",
-      "kind": "file",
-      "source": "filesystem",
-      "name": "report.txt",
-      "timestamp": "2026-08-28T13:32:20.917314+00:00",
-      "path": "/mnt/data/trace_final/trace/examples/demo_evidence/report.txt",
-      "sha256": "74313a8658035f178c47c1410e969c29a7e995bf0f98475468b40e90cb88acd0",
+      "id": "demo:download",
+      "kind": "download",
+      "source": "chrome",
+      "name": "invoice.pdf",
+      "timestamp": "2026-08-28T10:00:00+00:00",
+      "path": "/mnt/data/trace/examples/demo_evidence/invoice.pdf",
+      "sha256": null,
       "metadata": {
-        "detected_type": "text/plain",
-        "size": 72,
-        "entropy": 4.08,
-        "extension": ".txt"
+        "url": "https://example.test/invoice.pdf"
       },
       "observed": true
     }
   ],
-  "relationships": [],
-  "findings": []
+  "relationships": [
+    {
+      "source_id": "demo:download",
+      "target_id": "file:1252b869-e9b0-5504-9d1a-f378d41cbfd3",
+      "relation": "downloaded_as",
+      "confidence": 0.9700000000000001,
+      "basis": [
+        "filename match",
+        "timestamp proximity: 0.0s",
+        "exact target path match"
+      ],
+      "inferred": true
+    },
+    {
+      "source_id": "demo:visit",
+      "target_id": "demo:download",
+      "relation": "preceded_download",
+      "confidence": 0.84,
+      "basis": [
+        "timestamp proximity: 20.0s",
+        "same URL host"
+      ],
+      "inferred": true
+    }
+  ],
+  "findings": [
+    {
+      "severity": "medium",
+      "title": "PDF JavaScript indicator",
+      "artifact_id": "file:1252b869-e9b0-5504-9d1a-f378d41cbfd3",
+      "detail": "PDF bytes contain a JavaScript marker."
+    }
+  ]
 }

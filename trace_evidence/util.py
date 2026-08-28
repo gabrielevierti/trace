@@ -1,49 +1,53 @@
 from __future__ import annotations
-import hashlib, math, mimetypes, os, plistlib, re
+import hashlib, json, mimetypes, os, subprocess
 from pathlib import Path
 from datetime import datetime, timezone
 
-MAGIC = [(b'%PDF-', 'PDF document'), (b'PK\x03\x04', 'ZIP/OOXML archive'), (b'\xFF\xD8\xFF', 'JPEG image'), (b'\x89PNG\r\n\x1a\n', 'PNG image'), (b'GIF8', 'GIF image'), (b'\x7fELF', 'ELF executable'), (b'MZ', 'PE executable')]
+MAGIC = {
+    b'%PDF-': 'PDF document', b'PK\x03\x04': 'ZIP/container (possibly DOCX/XLSX/PPTX)',
+    b'\x89PNG\r\n\x1a\n': 'PNG image', b'\xff\xd8\xff': 'JPEG image',
+    b'GIF87a': 'GIF image', b'GIF89a': 'GIF image', b'\x7fELF': 'ELF executable',
+    b'MZ': 'PE/Windows executable', b'\x1f\x8b': 'GZIP compressed data',
+}
 
-def sha256_file(path: Path, chunk=1024*1024):
+def sha256(path: Path, chunk=1024*1024):
     h=hashlib.sha256()
     with path.open('rb') as f:
-        while b:=f.read(chunk): h.update(b)
+        for b in iter(lambda:f.read(chunk), b''): h.update(b)
     return h.hexdigest()
+
+def iso(ts: float): return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
+def now_iso(): return datetime.now(timezone.utc).isoformat()
 
 def detect_type(path: Path):
     try:
-        with path.open('rb') as f: head=f.read(32)
-    except OSError: return 'unreadable'
-    for magic,name in MAGIC:
-        if head.startswith(magic): return name
+        head=path.read_bytes()[:16]
+        for magic,label in MAGIC.items():
+            if head.startswith(magic): return label
+    except OSError: pass
     return mimetypes.guess_type(path.name)[0] or 'unknown'
 
-def entropy(path: Path, limit=1024*1024):
+def entropy(path: Path, sample=1024*1024):
     try:
-        data=path.read_bytes()[:limit]
+        data=path.read_bytes()[:sample]
+        if not data: return 0.0
+        counts=[0]*256
+        for b in data: counts[b]+=1
+        import math
+        n=len(data)
+        return -sum((c/n)*math.log2(c/n) for c in counts if c)
     except OSError: return None
-    if not data:return 0.0
-    counts=[0]*256
-    for b in data: counts[b]+=1
-    n=len(data); return round(-sum((c/n)*math.log2(c/n) for c in counts if c),3)
 
-def extract_strings(path: Path, minimum=6, limit=2*1024*1024):
-    try:data=path.read_bytes()[:limit]
-    except OSError:return []
-    vals=re.findall(rb'[\x20-\x7e]{%d,}'%minimum,data)
-    return [v.decode('utf-8','replace') for v in vals[:500]]
+def safe_copy(src: Path, dst: Path):
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    import shutil
+    shutil.copy2(src, dst)
 
-def iso(ts):
-    if ts is None:return None
-    return datetime.fromtimestamp(ts, timezone.utc).isoformat()
-
-def stable_id(*parts):
-    return hashlib.sha1('|'.join(str(x) for x in parts).encode()).hexdigest()[:16]
-
-def plist_summary(path: Path):
+def run_command(args, timeout=30):
     try:
-        with path.open('rb') as f: obj=plistlib.load(f)
-        if isinstance(obj,dict): return {str(k): str(v)[:300] for k,v in list(obj.items())[:40]}
-    except Exception: pass
-    return {}
+        p=subprocess.run(args, capture_output=True, text=True, timeout=timeout, check=False)
+        return p.stdout, p.stderr, p.returncode
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return '', str(e), -1
+
+def json_dump(path, obj): Path(path).write_text(json.dumps(obj,indent=2,ensure_ascii=False),encoding='utf-8')

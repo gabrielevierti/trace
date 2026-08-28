@@ -13,6 +13,7 @@ class Artifact:
     sha256: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
     observed: bool = True
+
     def to_dict(self): return asdict(self)
 
 @dataclass
@@ -23,4 +24,5 @@ class Relationship:
     confidence: float
     basis: list[str]
     inferred: bool = True
+
     def to_dict(self): return asdict(self)

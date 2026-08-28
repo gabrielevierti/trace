@@ -1,26 +1,27 @@
 from __future__ import annotations
-import sqlite3, shutil, tempfile
+import sqlite3, shutil, tempfile, uuid
 from pathlib import Path
+from datetime import datetime, timezone, timedelta
 from trace_evidence.model import Artifact
-from trace_evidence.util import stable_id
-EPOCH=11644473600
+CHROME_EPOCH=datetime(1601,1,1,tzinfo=timezone.utc)
+def chrome_time(us):
+    if not us: return None
+    try: return (CHROME_EPOCH+timedelta(microseconds=int(us))).isoformat()
+    except (ValueError,TypeError,OverflowError): return None
 
-def chrome_time(v):
-    try:
-        from datetime import datetime, timezone
-        return datetime.fromtimestamp(v/1_000_000-EPOCH,timezone.utc).isoformat()
-    except Exception:return None
-
-def parse(path):
-    path=Path(path).expanduser(); out=[]
-    if not path.exists():return out
-    with tempfile.NamedTemporaryFile(suffix='.db') as tmp:
-        try: shutil.copy2(path,tmp.name); con=sqlite3.connect(tmp.name)
-        except Exception:return out
+def parse(history_path):
+    src=Path(history_path).expanduser(); out=[]
+    if not src.exists(): return out
+    with tempfile.TemporaryDirectory() as d:
+        copy=Path(d)/'History'; shutil.copy2(src,copy)
+        con=sqlite3.connect(copy); con.row_factory=sqlite3.Row
         try:
-            for row in con.execute('SELECT id,url,title,last_visit_time FROM urls ORDER BY last_visit_time DESC LIMIT 5000'):
-                i,url,title,ts=row; out.append(Artifact(stable_id('chrome_visit',i,url), 'browser_visit','chrome',title or url,chrome_time(ts),None,None,{'url':url,'title':title or ''}))
-            for row in con.execute('SELECT id,target_path,current_path,tab_url,referrer,last_access_time FROM downloads ORDER BY last_access_time DESC LIMIT 5000'):
-                i,target,current,url,ref,ts=row; p=current or target; out.append(Artifact(stable_id('chrome_download',i,p,ts),'download','chrome',Path(p).name,p and chrome_time(ts),p,None,{'url':url or '', 'referrer':ref or '', 'target_path':target or '', 'current_path':current or ''}))
-        finally: con.close()
+            for r in con.execute('''SELECT d.id,d.guid,d.target_path,d.start_time,d.end_time,u.url,d.tab_url,d.total_bytes
+              FROM downloads d LEFT JOIN downloads_url_chains u ON d.id=u.id AND u.chain_index=0'''):
+                path=r['target_path']; name=Path(path).name if path else 'unknown'
+                out.append(Artifact(id=f"chrome:download:{r['id']}",kind='download',source='chrome',name=name,path=path,timestamp=chrome_time(r['start_time']),metadata={'url':r['url'],'tab_url':r['tab_url'],'bytes':r['total_bytes'],'end_time':chrome_time(r['end_time'])}))
+            for r in con.execute('SELECT id,url,title,last_visit_time FROM urls'):
+                out.append(Artifact(id=f"chrome:visit:{r['id']}",kind='browser_visit',source='chrome',name=(r['title'] or r['url'] or 'visit')[:160],timestamp=chrome_time(r['last_visit_time']),metadata={'url':r['url']}))
+        except sqlite3.Error: pass
+        con.close()
     return out
