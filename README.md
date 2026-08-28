@@ -80,15 +80,3 @@ trace verify CASE-001/manifest.json
 ## Scope and limitations
 
 TRACE is a research/portfolio tool, not a validated forensic product and not a substitute for established forensic suites or acquisition procedures. It should be used on evidence you are authorized to examine. Browser database schemas and operating-system artifacts change between releases; parsers therefore fail conservatively rather than pretending an unsupported artifact is valid.
-
-## Suggested interview demo
-
-1. Create a small folder containing several real files of your own.
-2. Run `trace analyze` against it while optionally parsing your local browser history.
-3. Open the generated HTML report.
-4. Select a download/file node and show the relationship basis.
-5. Show the SHA-256 value.
-6. Change one evidence file.
-7. Run `trace verify` and demonstrate that the manifest reports `MODIFIED`.
-
-The key design point to explain is that TRACE does not merely display data: it **preserves provenance, normalizes heterogeneous artifacts and produces explainable correlations**.
