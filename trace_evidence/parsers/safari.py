@@ -1,28 +1,24 @@
 from __future__ import annotations
-import sqlite3, shutil, tempfile, uuid
+import sqlite3, shutil, tempfile
 from pathlib import Path
-from datetime import datetime, timezone
 from trace_evidence.model import Artifact
+from trace_evidence.util import stable_id
 
-# Safari stores timestamps as seconds since 2001-01-01 in History.db
-EPOCH = datetime(2001,1,1,tzinfo=timezone.utc)
-def safari_time(v):
-    if v is None: return None
-    try: return (EPOCH + __import__('datetime').timedelta(seconds=float(v))).isoformat()
-    except (ValueError, TypeError): return None
-
-def parse(history_path: str):
-    src=Path(history_path).expanduser()
-    if not src.exists(): return []
-    with tempfile.TemporaryDirectory() as d:
-        copy=Path(d)/'History.db'; shutil.copy2(src, copy)
-        con=sqlite3.connect(copy); con.row_factory=sqlite3.Row
-        out=[]
+def parse(path):
+    path=Path(path).expanduser(); out=[]
+    if not path.exists():return out
+    with tempfile.NamedTemporaryFile(suffix='.db') as tmp:
+        try: shutil.copy2(path,tmp.name); con=sqlite3.connect(tmp.name)
+        except Exception:return out
         try:
-            rows=con.execute('''SELECT i.id,i.url,i.title,v.visit_time FROM history_items i JOIN history_visits v ON i.id=v.history_item''').fetchall()
-            for r in rows:
-                name=(r['title'] or r['url'] or 'visit')[:160]
-                out.append(Artifact(id=f"safari:{r['id']}:{uuid.uuid4()}", kind='browser_visit', source='safari', name=name,
-                    timestamp=safari_time(r['visit_time']), metadata={'url':r['url']}))
-        except sqlite3.Error: pass
-        con.close(); return out
+            # Safari schema varies by macOS version; try common HistoryItems/HistoryVisits layouts.
+            q='''SELECT hv.id, hi.url, hi.title, hv.visit_time FROM history_visits hv JOIN history_items hi ON hv.history_item=hi.id ORDER BY hv.visit_time DESC LIMIT 5000'''
+            for i,url,title,ts in con.execute(q):
+                # Safari timestamps are seconds since 2001-01-01.
+                from datetime import datetime,timezone,timedelta
+                try:t=(datetime(2001,1,1,tzinfo=timezone.utc)+timedelta(seconds=ts)).isoformat()
+                except Exception:t=None
+                out.append(Artifact(stable_id('safari_visit',i,url),'browser_visit','safari',title or url,t,None,None,{'url':url,'title':title or ''}))
+        except Exception: pass
+        finally: con.close()
+    return out

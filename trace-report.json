@@ -1,0 +1,55 @@
+{
+  "artifacts": [
+    {
+      "id": "37bc454c6f9dd3a6",
+      "kind": "file",
+      "source": "filesystem",
+      "name": "bundle.zip",
+      "timestamp": "2026-08-28T13:32:20.917542+00:00",
+      "path": "/mnt/data/trace_final/trace/examples/demo_evidence/bundle.zip",
+      "sha256": "58580acb60edf1f7cfe3ce392441a94cc3e994080606940237ded75e9575eba6",
+      "metadata": {
+        "detected_type": "ZIP/OOXML archive",
+        "size": 340,
+        "entropy": 4.598,
+        "extension": ".zip",
+        "container": "archive/container candidate"
+      },
+      "observed": true
+    },
+    {
+      "id": "e940fbcdfac0fd9b",
+      "kind": "file",
+      "source": "filesystem",
+      "name": "notes.txt",
+      "timestamp": "2026-08-28T13:32:20.917356+00:00",
+      "path": "/mnt/data/trace_final/trace/examples/demo_evidence/notes.txt",
+      "sha256": "5f6fd39c453a77dfd781be3e313abf8228d7ecbd1af710d86812cf4fc3d9bbee",
+      "metadata": {
+        "detected_type": "text/plain",
+        "size": 56,
+        "entropy": 4.076,
+        "extension": ".txt"
+      },
+      "observed": true
+    },
+    {
+      "id": "16d26555883edc6f",
+      "kind": "file",
+      "source": "filesystem",
+      "name": "report.txt",
+      "timestamp": "2026-08-28T13:32:20.917314+00:00",
+      "path": "/mnt/data/trace_final/trace/examples/demo_evidence/report.txt",
+      "sha256": "74313a8658035f178c47c1410e969c29a7e995bf0f98475468b40e90cb88acd0",
+      "metadata": {
+        "detected_type": "text/plain",
+        "size": 72,
+        "entropy": 4.08,
+        "extension": ".txt"
+      },
+      "observed": true
+    }
+  ],
+  "relationships": [],
+  "findings": []
+}

@@ -1,5 +1,5 @@
-#!/usr/bin/env bash
+#!/bin/sh
 set -e
-mkdir -p /tmp/trace-demo
-printf 'TRACE demo evidence\n' > /tmp/trace-demo/report.pdf
-trace analyze /tmp/trace-demo --output /tmp/trace-demo/report.html
+python examples/generate_demo.py
+trace analyze examples/demo_evidence --case DEMO-001
+printf '\nOpen trace-report.html in your browser.\n'
