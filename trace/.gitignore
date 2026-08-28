@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+trace-report.html
+trace-report.json
+TRACE-CASE/
+*.egg-info/

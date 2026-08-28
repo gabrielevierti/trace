@@ -1,5 +1,5 @@
 from __future__ import annotations
-import argparse, json
+import argparse, json, webbrowser
 from pathlib import Path
 from trace_evidence.parsers.filesystem import scan
 from trace_evidence.parsers.chrome import parse as parse_chrome
@@ -35,11 +35,14 @@ def main():
     c.add_argument('--output',default='TRACE-CASE'); c.add_argument('--logs',action='store_true'); c.add_argument('--log-hours',type=int,default=1)
     a=sub.add_parser('analyze',help='Analyze an evidence directory')
     a.add_argument('path'); a.add_argument('--case',default='LOCAL-001'); a.add_argument('--chrome',action='store_true'); a.add_argument('--chrome-path'); a.add_argument('--safari',action='store_true'); a.add_argument('--safari-path'); a.add_argument('--quarantine',action='store_true'); a.add_argument('--quarantine-path'); a.add_argument('--unified-log',action='append'); a.add_argument('--usb-profile',action='append'); a.add_argument('--max-file-mb',type=int,default=512); a.add_argument('--json',default='trace-report.json'); a.add_argument('--output',default='trace-report.html'); a.add_argument('--pdf',default=None)
+    i=sub.add_parser('investigate',help='Analyze evidence and open the interactive investigation report'); i.add_argument('path'); i.add_argument('--case',default='LOCAL-001'); i.add_argument('--chrome',action='store_true'); i.add_argument('--chrome-path'); i.add_argument('--safari',action='store_true'); i.add_argument('--safari-path'); i.add_argument('--quarantine',action='store_true'); i.add_argument('--quarantine-path'); i.add_argument('--unified-log',action='append'); i.add_argument('--usb-profile',action='append'); i.add_argument('--max-file-mb',type=int,default=512); i.add_argument('--json',default='trace-report.json'); i.add_argument('--output',default='trace-report.html'); i.add_argument('--pdf',default=None)
     v=sub.add_parser('verify',help='Verify a case evidence manifest'); v.add_argument('case')
     args=p.parse_args()
     if args.cmd=='collect-macos':
         cid,items=collect_macos(args.output,args.logs,args.log_hours); print(f'Created {cid} with {len(items)} collected sources.')
     elif args.cmd=='analyze': analyze_cmd(args)
+    elif args.cmd=='investigate':
+        analyze_cmd(args); webbrowser.open(Path(args.output).resolve().as_uri())
     elif args.cmd=='verify':
         results=Case(args.case).verify(); print(json.dumps(results,indent=2)); print(f'OK: {sum(x["status"]=="OK" for x in results)}  MODIFIED: {sum(x["status"]=="MODIFIED" for x in results)}  MISSING: {sum(x["status"]=="MISSING" for x in results)}')
 if __name__=='__main__': main()

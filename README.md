@@ -115,3 +115,7 @@ The test suite is intentionally small but covers core hashing and correlation be
 TRACE is a research/portfolio project, not a validated forensic examination suite. Artifact schemas change across OS/browser versions; permissions may prevent acquisition; timestamps can have different semantics; and absence of an artifact is not proof that an event did not occur. Do not treat automated confidence scores as statistical probabilities.
 
 For any real investigation, preserve evidence using the procedures, tools, legal authority and chain-of-custody requirements applicable to the case.
+
+## Project goal
+
+The project explores how a lightweight tool can reduce the cognitive load of reviewing fragmented digital evidence while keeping every inference explainable and traceable to source artifacts.
